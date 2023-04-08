@@ -5,6 +5,7 @@
 //
 
 import Foundation
+import CoreBluetooth
 
 public struct BLEPeripheral: Identifiable, Decodable, Hashable {
     
@@ -26,4 +27,24 @@ public struct BLEPeripheral: Identifiable, Decodable, Hashable {
     public var isConnectable: Bool?
     public var mfgData: String?
     
+    public var services = [BLEPeripheralService]()
+    
+    init(id: String,
+         name: String? = nil,
+         rssi: Int,
+         serviceUUIDs: [String]? = nil,
+         timeStamp: Double? = nil,
+         localName: String? = nil,
+         isConnectable: Bool? = nil,
+         mfgData: String? = nil) {
+        
+            self.id = id
+            self.name = name
+            self.rssi = rssi
+            self.serviceUUIDs = serviceUUIDs
+            self.timeStamp = timeStamp
+            self.localName = localName
+            self.isConnectable = isConnectable
+            self.mfgData = mfgData
+    }
 }

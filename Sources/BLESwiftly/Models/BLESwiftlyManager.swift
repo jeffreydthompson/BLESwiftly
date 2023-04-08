@@ -8,13 +8,17 @@ import Foundation
 import Combine
 import CoreBluetooth
 
-public class BLEManager: NSObject, BLEService {
-
-    private var cbManager: CBCentralManager!
+public class BLESwiftlyManager: NSObject, BLEService {
     
-    public var isOn = PassthroughSubject<Bool, BLEError>()
-    public var isScanning = PassthroughSubject<Bool, Never>()
+    @Published var _isScanning = false
+    var isScanning: Published<Bool>.Publisher { $_isScanning }
+    
+    var isOn = PassthroughSubject<Bool, BLEError>()
+    var isConnectedToPeripheral = PassthroughSubject<Bool, BLEError>()
+    
     public var scannedPeripheral = PassthroughSubject<BLEPeripheral, Never>()
+    
+    private var cbManager: CBCentralManager!
     
     override init() {
         super.init()
@@ -23,6 +27,7 @@ public class BLEManager: NSObject, BLEService {
     
     public func startScan(duration seconds: Double?) {
         cbManager.scanForPeripherals(withServices: nil)
+        updateScanState()
         if let seconds = seconds {
             DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
                 guard let self = self else { return }
@@ -33,11 +38,17 @@ public class BLEManager: NSObject, BLEService {
     
     public func stopScan() {
         cbManager.stopScan()
+        updateScanState()
+    }
+    
+    private func updateScanState() {
+        _isScanning = cbManager.isScanning
     }
     
 }
 
-extension BLEManager: CBCentralManagerDelegate {
+extension BLESwiftlyManager: CBCentralManagerDelegate {
+    
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOn:
@@ -53,6 +64,7 @@ extension BLEManager: CBCentralManagerDelegate {
         default:
             isOn.send(false)
         }
+        updateScanState()
     }
     
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
@@ -61,5 +73,34 @@ extension BLEManager: CBCentralManagerDelegate {
            let peripheral = try? JSONDecoder().decode(BLEPeripheral.self, from: data) {
             scannedPeripheral.send(peripheral)
         }
+    }
+    
+    public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        isConnectedToPeripheral.send(true)
+    }
+    
+    public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        
+        isConnectedToPeripheral.send(completion: .failure(.failedToConnect))
+    }
+    
+    public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        
+        if let _ = error {
+            isConnectedToPeripheral.send(completion: .failure(.disconnectError))
+        } else {
+            isConnectedToPeripheral.send(false)
+        }
+    }
+}
+
+extension BLESwiftlyManager: CBPeripheralDelegate {
+    
+    public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        
+        peripheral.services?.forEach({ service in
+            
+        })
+        
     }
 }

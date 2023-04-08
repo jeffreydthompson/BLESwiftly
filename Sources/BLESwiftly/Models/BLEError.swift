@@ -11,4 +11,6 @@ public enum BLEError: Swift.Error {
     case bleIsUnauthorized
     case bleIsUnsupported
     case bleUnknownError
+    case failedToConnect
+    case disconnectError
 }
